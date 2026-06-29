@@ -12,12 +12,16 @@ export class LoginPage {
   readonly emailField: Locator;
   readonly passwordField: Locator;
   readonly signInButton: Locator;
+  readonly errorMessage: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.emailField = page.getByLabel('Email');
     this.passwordField = page.getByLabel('Password');
     this.signInButton = page.getByRole('button', { name: 'Sign in' });
+    // Best-effort: the error/alert banner shown on a failed sign-in. Not in the
+    // happy-path walkthrough — verify against the live site (wrong password).
+    this.errorMessage = page.getByText(/invalid|incorrect|wrong|failed|try again/i).first();
   }
 
   /** Open the login page (relative to baseURL in playwright.config.ts). */
@@ -49,5 +53,11 @@ export class LoginPage {
   async assertLoggedIn(): Promise<void> {
     await expect(this.page).not.toHaveURL(/\/login$/);
     await expect(this.page.getByText('QE Agentic Hub').first()).toBeVisible();
+  }
+
+  /** Assert a failed sign-in: an error is shown and we stay on /login. */
+  async assertLoginFailed(): Promise<void> {
+    await expect(this.page).toHaveURL(/\/login$/);
+    await expect(this.errorMessage).toBeVisible();
   }
 }

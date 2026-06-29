@@ -17,7 +17,9 @@ export class DefectTriagingPage {
   readonly runningStatus: Locator;
   readonly analyzerPrompt: Locator;
   readonly yesButton: Locator;
+  readonly noButton: Locator;
   readonly triageSummary: Locator;
+  readonly validationError: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -28,7 +30,13 @@ export class DefectTriagingPage {
     this.runningStatus = page.getByText(/Running/i).first();
     this.analyzerPrompt = page.getByText(/Do you want to continue with Defect Analyzer/i);
     this.yesButton = page.getByRole('button', { name: 'YES' });
+    this.noButton = page.getByRole('button', { name: 'NO' });
     this.triageSummary = page.getByText('Triage Summary').first();
+    // Best-effort: the inline validation shown when Defect ID is blank. Not in
+    // the happy-path walkthrough — verify against the live site.
+    this.validationError = page
+      .getByText(/required|enter a defect id|cannot be empty|please provide/i)
+      .first();
   }
 
   /** Open the Defect Triaging workspace for a given project slug. */
@@ -59,11 +67,32 @@ export class DefectTriagingPage {
     await this.yesButton.click();
   }
 
+  /** HITL prompt #1 — decline continuing with the Defect Analyzer (NO). */
+  async declineAnalyzer(): Promise<void> {
+    await expect(this.analyzerPrompt).toBeVisible();
+    await this.noButton.click();
+  }
+
   /** HITL prompt #2 — pick the assignee from the list the agent surfaces. */
   async selectAssignee(assignee: string): Promise<void> {
     const candidate = this.page.getByText(assignee);
     await expect(candidate).toBeVisible();
     await candidate.click();
+  }
+
+  /** Click "Triage Defect" without confirming a Running status (negative paths). */
+  async clickTriageDefect(): Promise<void> {
+    await this.triageDefectButton.click();
+  }
+
+  /** Assert the Defect ID validation error is shown (blank submit). */
+  async assertDefectIdRequired(): Promise<void> {
+    await expect(this.validationError).toBeVisible();
+  }
+
+  /** Assert the run ended WITHOUT an owner being assigned (declined path). */
+  async assertNoAssignment(): Promise<void> {
+    await expect(this.page.getByText(/Successfully assigned defect/i)).toHaveCount(0);
   }
 
   /** Assert the run finished with a Triage Summary, ADO resolution, and owner. */

@@ -31,6 +31,12 @@ export async function approveAnalyzer(page: Page): Promise<void> {
   await defectPage.continueWithAnalyzer();
 }
 
+/** HITL prompt #1 — decline continuing with the Defect Analyzer (NO). */
+export async function declineAnalyzer(page: Page): Promise<void> {
+  const defectPage = new DefectTriagingPage(page);
+  await defectPage.declineAnalyzer();
+}
+
 /** HITL prompt #2 — assign the defect by picking an owner from the list. */
 export async function assignOwner(page: Page, assignee: string): Promise<void> {
   const defectPage = new DefectTriagingPage(page);
@@ -41,6 +47,27 @@ export async function assignOwner(page: Page, assignee: string): Promise<void> {
 export async function assertRunCompleted(page: Page): Promise<void> {
   const defectPage = new DefectTriagingPage(page);
   await defectPage.assertTriageSummary();
+}
+
+/**
+ * Open the workspace, switch to Neo4j Lookup, and submit without a Defect ID —
+ * then assert the validation error appears. Used by the empty-ID negative test.
+ */
+export async function submitDefectWithoutId(
+  page: Page,
+  projectSlug = 'proj-rbac-test',
+): Promise<void> {
+  const defectPage = new DefectTriagingPage(page);
+  await defectPage.openWorkspace(projectSlug);
+  await defectPage.clickNeo4jLookup();
+  await defectPage.clickTriageDefect();
+  await defectPage.assertDefectIdRequired();
+}
+
+/** Assert the run ended without an owner being assigned (declined path). */
+export async function assertNoAssignment(page: Page): Promise<void> {
+  const defectPage = new DefectTriagingPage(page);
+  await defectPage.assertNoAssignment();
 }
 
 /**
