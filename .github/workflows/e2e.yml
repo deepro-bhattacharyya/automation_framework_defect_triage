@@ -1,0 +1,73 @@
+name: E2E — Defect Triaging
+
+# Runs the Playwright suite on every push / PR and uploads the HTML report.
+#
+# IMPORTANT: the target hub (https://10.120.101.154) is an INTERNAL host that is
+# NOT reachable from GitHub-hosted runners. This workflow therefore runs on a
+# SELF-HOSTED runner that sits on the corporate network. Register one and label
+# it `self-hosted` (see GitHub → Settings → Actions → Runners) before enabling.
+#
+# Required repository secrets:
+#   HUB_EMAIL, HUB_PASSWORD        — credentials for the test account
+#   SLACK_WEBHOOK_URL (optional)   — Slack Incoming Webhook for pass/fail notice
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  e2e:
+    runs-on: [self-hosted]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chrome
+        run: npx playwright install --with-deps chrome
+
+      - name: Reset agent run state (best-effort)
+        run: npx tsx tools/reset-run-state.ts
+        continue-on-error: true
+        env:
+          HUB_BASE_URL: https://10.120.101.154
+          HUB_RESET_ENDPOINT: ${{ vars.HUB_RESET_ENDPOINT }}
+          HUB_TOKEN: ${{ secrets.HUB_TOKEN }}
+
+      - name: Run Playwright tests
+        run: npm test
+        env:
+          CI: 'true'
+          HUB_EMAIL: ${{ secrets.HUB_EMAIL }}
+          HUB_PASSWORD: ${{ secrets.HUB_PASSWORD }}
+
+      - name: Upload HTML report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Notify Slack
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          STATUS: ${{ job.status }}
+        run: |
+          curl -s -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"Defect Triaging E2E: *${STATUS}* on \`${GITHUB_REF_NAME}\` (run ${GITHUB_RUN_ID}). Report uploaded as an artifact.\"}" \
+            "${SLACK_WEBHOOK_URL}"

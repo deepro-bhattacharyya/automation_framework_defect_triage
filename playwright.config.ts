@@ -12,9 +12,14 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
+  // NOTE on parallelism: the 4 agent specs all triage the SAME defect (id 80)
+  // against the shared live hub and publish to ADO, so they are NOT safe to run
+  // concurrently. We keep cross-file parallelism conservative. On CI we allow a
+  // small worker pool (the auth specs are independent); if the agent specs prove
+  // flaky in parallel, drop CI back to `workers: 1`.
   fullyParallel: false,
-  workers: 1,
-  retries: 0,
+  workers: process.env.CI ? '50%' : 1, // ~half the cores on CI (plan: cpus / 2)
+  retries: process.env.CI ? 1 : 0,     // one retry on CI to absorb a flaky run
   timeout: 180_000,            // 3 min — agent runs are long
   expect: { timeout: 60_000 }, // a single wait (e.g. for a run to finish) can be slow
   reporter: [['list'], ['html', { open: 'never' }]],
