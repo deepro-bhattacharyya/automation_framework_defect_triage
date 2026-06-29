@@ -1,5 +1,6 @@
 import { test } from '@playwright/test';
 import { LoginPage } from '../../pages/LoginPage';
+import { USERS } from '../../tools/test-data';
 
 /**
  * SCRIPT 3 — Login (wrong password)
@@ -11,12 +12,9 @@ import { LoginPage } from '../../pages/LoginPage';
  * the failure path was not in the walkthrough recording. Verify it live.
  */
 
-const HUB_EMAIL = process.env.HUB_EMAIL ?? 'deepro.bhattacharyya@cognizant.com';
-const WRONG_PASSWORD = 'definitely-not-the-right-password';
-
 test('sign-in with a wrong password shows an error and stays on /login', async ({ page }) => {
   const loginPage = new LoginPage(page);
 
-  await loginPage.login(HUB_EMAIL, WRONG_PASSWORD);
+  await loginPage.login(USERS.wrongPassword.email, USERS.wrongPassword.password);
   await loginPage.assertLoginFailed();
 });

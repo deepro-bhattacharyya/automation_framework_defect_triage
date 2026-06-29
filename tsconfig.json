@@ -10,5 +10,5 @@
     "resolveJsonModule": true,
     "types": ["@playwright/test", "node"]
   },
-  "include": ["tests/**/*", "pages/**/*", "reusable-components/**/*", "playwright.config.ts"]
+  "include": ["tests/**/*", "pages/**/*", "reusable-components/**/*", "tools/**/*", "playwright.config.ts"]
 }

@@ -1,5 +1,4 @@
-import { test } from '@playwright/test';
-import { loginAs } from '../../reusable-components/AuthFlows';
+import { test } from '../../tools/fixtures';
 import { submitDefectWithoutId } from '../../reusable-components/AgentFlows';
 
 /**
@@ -13,10 +12,6 @@ import { submitDefectWithoutId } from '../../reusable-components/AgentFlows';
  * best-effort — this path was not in the walkthrough recording. Verify it live.
  */
 
-const HUB_EMAIL = process.env.HUB_EMAIL ?? 'deepro.bhattacharyya@cognizant.com';
-const HUB_PASSWORD = process.env.HUB_PASSWORD ?? '2513927';
-
-test('submitting with a blank Defect ID shows a validation error', async ({ page }) => {
-  await loginAs(page, HUB_EMAIL, HUB_PASSWORD);
-  await submitDefectWithoutId(page);
+test('submitting with a blank Defect ID shows a validation error', async ({ authedPage }) => {
+  await submitDefectWithoutId(authedPage);
 });

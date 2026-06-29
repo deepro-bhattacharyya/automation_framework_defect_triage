@@ -1,6 +1,6 @@
-import { test } from '@playwright/test';
-import { loginAs } from '../../reusable-components/AuthFlows';
+import { test } from '../../tools/fixtures';
 import { triageDefectEndToEnd } from '../../reusable-components/AgentFlows';
+import { DEFECTS, ASSIGNEES } from '../../tools/test-data';
 
 /**
  * SCRIPT 7 — Defect Triaging (re-submit the same Defect ID)
@@ -14,12 +14,6 @@ import { triageDefectEndToEnd } from '../../reusable-components/AgentFlows';
  * this spec will need its own assertion — verify live and adjust.
  */
 
-const HUB_EMAIL = process.env.HUB_EMAIL ?? 'deepro.bhattacharyya@cognizant.com';
-const HUB_PASSWORD = process.env.HUB_PASSWORD ?? '2513927';
-const DEFECT_ID = '80';
-const ASSIGNEE = 'Arul Amuthan, Ahill Savio (Cognizant)';
-
-test('re-submitting an already-triaged defect completes gracefully', async ({ page }) => {
-  await loginAs(page, HUB_EMAIL, HUB_PASSWORD);
-  await triageDefectEndToEnd(page, DEFECT_ID, ASSIGNEE);
+test('re-submitting an already-triaged defect completes gracefully', async ({ authedPage }) => {
+  await triageDefectEndToEnd(authedPage, DEFECTS.sample.id, ASSIGNEES.arul);
 });
