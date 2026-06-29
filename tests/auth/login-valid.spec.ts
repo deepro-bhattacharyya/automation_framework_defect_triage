@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { LoginPage } from '../../pages/LoginPage';
+import { loginAs } from '../../reusable-components/AuthFlows';
 
 /**
  * SCRIPT 1 — Login (happy path)
@@ -7,8 +7,9 @@ import { LoginPage } from '../../pages/LoginPage';
  * Signs in to the Cognizant QE Agentic Hub with valid credentials and
  * confirms we land inside the app (no longer on /login).
  *
- * Refactored in Phase 1: all locators now live in pages/LoginPage.ts. The
- * login STEPS move into reusable-components/AuthFlows.ts in Phase 2.
+ * Phase 1: locators live in pages/LoginPage.ts.
+ * Phase 2: the login steps now live in reusable-components/AuthFlows.ts, so this
+ * spec is a single declarative call.
  *
  * Credentials come from environment variables so nothing secret is committed.
  * Set them before running (PowerShell):
@@ -20,8 +21,5 @@ const HUB_EMAIL = process.env.HUB_EMAIL ?? 'deepro.bhattacharyya@cognizant.com';
 const HUB_PASSWORD = process.env.HUB_PASSWORD ?? '2513927';
 
 test('user can sign in to the QE Agentic Hub with valid credentials', async ({ page }) => {
-  const loginPage = new LoginPage(page);
-
-  await loginPage.login(HUB_EMAIL, HUB_PASSWORD);
-  await loginPage.assertLoggedIn();
+  await loginAs(page, HUB_EMAIL, HUB_PASSWORD);
 });
