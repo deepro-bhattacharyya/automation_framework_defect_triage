@@ -1,0 +1,77 @@
+import { type Page, type Locator, expect } from '@playwright/test';
+
+/**
+ * DefectTriagingPage — Page Object for the Defect Triaging workspace.
+ *
+ * Models the Neo4j Lookup flow: enter a Defect ID only, start the run, answer
+ * the two human-in-the-loop prompts (continue with Defect Analyzer, then pick
+ * the assignee), and read the final Triage Summary. See docs/TEST-WALKTHROUGH.md
+ * for the step-by-step the live site must match, and docs/PLAN.md → Phase 1.
+ */
+export class DefectTriagingPage {
+  readonly page: Page;
+  readonly heading: Locator;
+  readonly neo4jLookupTab: Locator;
+  readonly defectIdField: Locator;
+  readonly triageDefectButton: Locator;
+  readonly runningStatus: Locator;
+  readonly analyzerPrompt: Locator;
+  readonly yesButton: Locator;
+  readonly triageSummary: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.heading = page.getByText('Defect Triaging').first();
+    this.neo4jLookupTab = page.getByRole('button', { name: 'Neo4j Lookup' });
+    this.defectIdField = page.getByPlaceholder(/DEF-123.*BANK-389/i);
+    this.triageDefectButton = page.getByRole('button', { name: 'Triage Defect' });
+    this.runningStatus = page.getByText(/Running/i).first();
+    this.analyzerPrompt = page.getByText(/Do you want to continue with Defect Analyzer/i);
+    this.yesButton = page.getByRole('button', { name: 'YES' });
+    this.triageSummary = page.getByText('Triage Summary').first();
+  }
+
+  /** Open the Defect Triaging workspace for a given project slug. */
+  async openWorkspace(projectSlug = 'proj-rbac-test'): Promise<void> {
+    await this.page.goto(`/workspace?agent=defect-triaging&project=${projectSlug}`);
+    await expect(this.heading).toBeVisible();
+  }
+
+  /** Switch to the Neo4j Lookup tab (single Defect ID field). */
+  async clickNeo4jLookup(): Promise<void> {
+    await this.neo4jLookupTab.click();
+  }
+
+  /** Enter the Defect ID. In the Neo4j Lookup flow this is the only input. */
+  async enterDefectId(defectId: string): Promise<void> {
+    await this.defectIdField.fill(defectId);
+  }
+
+  /** Click "Triage Defect" and confirm the run starts (status → Running). */
+  async startRun(): Promise<void> {
+    await this.triageDefectButton.click();
+    await expect(this.runningStatus).toBeVisible();
+  }
+
+  /** HITL prompt #1 — answer the "continue with Defect Analyzer?" prompt YES. */
+  async continueWithAnalyzer(): Promise<void> {
+    await expect(this.analyzerPrompt).toBeVisible();
+    await this.yesButton.click();
+  }
+
+  /** HITL prompt #2 — pick the assignee from the list the agent surfaces. */
+  async selectAssignee(assignee: string): Promise<void> {
+    const candidate = this.page.getByText(assignee);
+    await expect(candidate).toBeVisible();
+    await candidate.click();
+  }
+
+  /** Assert the run finished with a Triage Summary, ADO resolution, and owner. */
+  async assertTriageSummary(): Promise<void> {
+    await expect(this.triageSummary).toBeVisible();
+    await expect(this.page.getByText(/Resolution published to ADO/i)).toBeVisible();
+    await expect(
+      this.page.getByText(/Flow ended|Successfully assigned defect/i),
+    ).toBeVisible();
+  }
+}

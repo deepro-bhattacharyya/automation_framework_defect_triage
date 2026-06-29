@@ -1,0 +1,34 @@
+import { defineConfig, devices } from '@playwright/test';
+
+/**
+ * Playwright config for the QE Agentic Hub - Defect Triaging suite.
+ *
+ * baseURL is the internal marketplace host. The site is served over a
+ * self-signed / "Not secure" certificate, so `ignoreHTTPSErrors` is on —
+ * otherwise every navigation would fail with a certificate error.
+ *
+ * The agent run is long (it streams many steps over a websocket and pauses for
+ * human input), so the per-test and expect timeouts are generous.
+ */
+export default defineConfig({
+  testDir: './tests',
+  fullyParallel: false,
+  workers: 1,
+  retries: 0,
+  timeout: 180_000,            // 3 min — agent runs are long
+  expect: { timeout: 60_000 }, // a single wait (e.g. for a run to finish) can be slow
+  reporter: [['list'], ['html', { open: 'never' }]],
+  use: {
+    baseURL: 'https://10.120.101.154',
+    ignoreHTTPSErrors: true,   // internal host uses a self-signed cert
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+  },
+  projects: [
+    {
+      name: 'chrome',
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+    },
+  ],
+});
