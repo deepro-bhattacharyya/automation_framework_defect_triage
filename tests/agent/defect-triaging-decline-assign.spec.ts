@@ -1,22 +1,20 @@
 import { test } from '../../tools/fixtures';
-import { submitDefect, declineAnalyzer, assertNoAssignment } from '../../reusable-components/AgentFlows';
+import { submitDefect, skipLogPublishing } from '../../reusable-components/AgentFlows';
 import { DEFECTS } from '../../tools/test-data';
 
 /**
- * SCRIPT 5 — Defect Triaging (decline at the human-in-the-loop prompt)
+ * SCRIPT 5 — Defect Triaging (skip log publishing at the HITL prompt)
  * ------------------------------------------------------------------
- * Submits a defect, then answers the "continue with Defect Analyzer?" prompt
- * with NO, and confirms the run ends WITHOUT an owner being assigned.
+ * Submits a defect, then at the first human-in-the-loop prompt chooses
+ * "Skip log publishing" instead of publishing the fetched logs to ADO.
  * See docs/PLAN.md → Phase 3.
  *
- * NOTE: the NO button and the "no assignment" assertion are best-effort — the
- * decline path was not in the walkthrough recording. Verify them live.
+ * NOTE: what the agent does AFTER skipping (whether it still assigns an owner)
+ * has not yet been validated end-to-end. The assertion below is intentionally
+ * minimal — extend it once the skip path is observed live.
  */
 
-test('declining the analyzer prompt ends the run without assigning an owner', async ({
-  authedPage,
-}) => {
+test('skipping log publishing at the HITL prompt is accepted', async ({ authedPage }) => {
   await submitDefect(authedPage, DEFECTS.sample.id);
-  await declineAnalyzer(authedPage);
-  await assertNoAssignment(authedPage);
+  await skipLogPublishing(authedPage);
 });

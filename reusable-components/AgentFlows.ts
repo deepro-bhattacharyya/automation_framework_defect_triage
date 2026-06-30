@@ -25,16 +25,16 @@ export async function submitDefect(
   await defectPage.startRun();
 }
 
-/** HITL prompt #1 — approve continuing with the Defect Analyzer (YES). */
-export async function approveAnalyzer(page: Page): Promise<void> {
+/** HITL prompt #1 — publish all fetched logs to ADO. */
+export async function publishLogs(page: Page): Promise<void> {
   const defectPage = new DefectTriagingPage(page);
-  await defectPage.continueWithAnalyzer();
+  await defectPage.publishAllLogs();
 }
 
-/** HITL prompt #1 — decline continuing with the Defect Analyzer (NO). */
-export async function declineAnalyzer(page: Page): Promise<void> {
+/** HITL prompt #1 — skip publishing logs to ADO. */
+export async function skipLogPublishing(page: Page): Promise<void> {
   const defectPage = new DefectTriagingPage(page);
-  await defectPage.declineAnalyzer();
+  await defectPage.skipLogPublishing();
 }
 
 /** HITL prompt #2 — assign the defect by picking an owner from the list. */
@@ -81,7 +81,7 @@ export async function triageDefectEndToEnd(
   projectSlug = 'proj-rbac-test',
 ): Promise<void> {
   await submitDefect(page, defectId, projectSlug);
-  await approveAnalyzer(page);
+  await publishLogs(page);
   await assignOwner(page, assignee);
   await assertRunCompleted(page);
 }

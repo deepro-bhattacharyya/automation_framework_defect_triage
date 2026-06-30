@@ -16,8 +16,10 @@ export class LoginPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.emailField = page.getByLabel('Email');
-    this.passwordField = page.getByLabel('Password');
+    // The login inputs have no <label>/id/name/aria-label — they are matched by
+    // type + placeholder (confirmed against the live DOM).
+    this.emailField = page.locator('input[type="email"]');
+    this.passwordField = page.locator('input[type="password"]');
     this.signInButton = page.getByRole('button', { name: 'Sign in' });
     // Best-effort: the error/alert banner shown on a failed sign-in. Not in the
     // happy-path walkthrough — verify against the live site (wrong password).
