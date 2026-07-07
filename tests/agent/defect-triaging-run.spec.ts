@@ -1,6 +1,6 @@
 import { test } from '../../tools/fixtures';
 import { triageDefectEndToEnd } from '../../reusable-components/AgentFlows';
-import { DEFECTS, ASSIGNEES } from '../../tools/test-data';
+import { DEFECTS } from '../../tools/test-data';
 
 /**
  * SCRIPT 2 — Defect Triaging agent (end-to-end happy path)
@@ -18,5 +18,5 @@ import { DEFECTS, ASSIGNEES } from '../../tools/test-data';
 test('defect triaging agent runs a defect end-to-end and assigns an owner', async ({
   authedPage,
 }) => {
-  await triageDefectEndToEnd(authedPage, DEFECTS.sample.id, ASSIGNEES.arul);
+  await triageDefectEndToEnd(authedPage, DEFECTS.sample.id);
 });

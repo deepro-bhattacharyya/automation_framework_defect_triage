@@ -21,9 +21,11 @@ export class LoginPage {
     this.emailField = page.locator('input[type="email"]');
     this.passwordField = page.locator('input[type="password"]');
     this.signInButton = page.getByRole('button', { name: 'Sign in' });
-    // Best-effort: the error/alert banner shown on a failed sign-in. Not in the
-    // happy-path walkthrough — verify against the live site (wrong password).
-    this.errorMessage = page.getByText(/invalid|incorrect|wrong|failed|try again/i).first();
+    // Covers both blank-field validation ("Email is required", "Password is
+    // required" — confirmed live) and wrong-password error banners.
+    this.errorMessage = page
+      .getByText(/required|invalid|incorrect|wrong|failed|try again/i)
+      .first();
   }
 
   /** Open the login page (relative to baseURL in playwright.config.ts). */

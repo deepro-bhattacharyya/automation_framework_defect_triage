@@ -20,8 +20,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: process.env.CI ? '50%' : 1, // ~half the cores on CI (plan: cpus / 2)
   retries: process.env.CI ? 1 : 0,     // one retry on CI to absorb a flaky run
-  timeout: 180_000,            // 3 min — agent runs are long
-  expect: { timeout: 60_000 }, // a single wait (e.g. for a run to finish) can be slow
+  timeout: 420_000,            // 7 min — 3 HITL steps + agent streaming; raised from 3 min
+  expect: { timeout: 90_000 }, // raised from 60s — each HITL wait can take a minute or more
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: 'https://10.120.101.154',

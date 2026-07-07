@@ -36,7 +36,12 @@ export const DEFECTS = {
   },
 } as const;
 
-/** Candidate assignees the agent surfaces at the assignment prompt. */
-export const ASSIGNEES = {
-  arul: 'Arul Amuthan, Ahill Savio (Cognizant)',
+/**
+ * Contributor name fragment used at HITL prompt #5 ("Please select and assign
+ * new contributor"). The agent presents a list of buttons; we match by a
+ * substring so the locator is stable across minor name-format changes.
+ * Confirmed live: "KURUBA VIRUPAKSHAPPA, Sunil BHUSHAN (Cognizant)" appears.
+ */
+export const CONTRIBUTORS = {
+  sunil: 'Sunil',
 } as const;

@@ -1,6 +1,6 @@
 import { test } from '../../tools/fixtures';
 import { triageDefectEndToEnd } from '../../reusable-components/AgentFlows';
-import { DEFECTS, ASSIGNEES } from '../../tools/test-data';
+import { DEFECTS } from '../../tools/test-data';
 
 /**
  * SCRIPT 7 — Defect Triaging (re-submit the same Defect ID)
@@ -15,5 +15,5 @@ import { DEFECTS, ASSIGNEES } from '../../tools/test-data';
  */
 
 test('re-submitting an already-triaged defect completes gracefully', async ({ authedPage }) => {
-  await triageDefectEndToEnd(authedPage, DEFECTS.sample.id, ASSIGNEES.arul);
+  await triageDefectEndToEnd(authedPage, DEFECTS.sample.id);
 });

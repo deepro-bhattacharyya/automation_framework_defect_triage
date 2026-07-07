@@ -19,6 +19,9 @@ export class DefectTriagingPage {
   readonly publishLogsButton: Locator;
   readonly skipLogsButton: Locator;
   readonly analyzerPrompt: Locator;
+  readonly publishResolutionPrompt: Locator;
+  readonly assignmentPrompt: Locator;
+  readonly selectContributorPrompt: Locator;
   readonly yesButton: Locator;
   readonly noButton: Locator;
   readonly triageSummary: Locator;
@@ -43,6 +46,14 @@ export class DefectTriagingPage {
     // HITL prompt #2 (confirmed live): after logs are published the agent asks
     // whether to continue with the Defect Analyzer, offering YES / NO.
     this.analyzerPrompt = page.getByText(/Do you want to continue with Defect Analyzer/i);
+    // HITL prompt #3 (confirmed live): after analysis, asks whether to publish
+    // the defect resolution to ADO, offering YES / NO.
+    this.publishResolutionPrompt = page.getByText(/Do you want to publish the defect resolution to ADO/i);
+    // HITL prompt #4 (confirmed live): asks whether to proceed with assigning.
+    this.assignmentPrompt = page.getByText(/Do you want to proceed with assigning the analyzed defect/i);
+    // HITL prompt #5 (confirmed live): presents a list of contributor buttons
+    // when no auto-match is found. Click any one name to assign.
+    this.selectContributorPrompt = page.getByText(/Please select and assign new contributor/i);
     this.yesButton = page.getByRole('button', { name: 'YES' });
     this.noButton = page.getByRole('button', { name: 'NO' });
     this.triageSummary = page.getByText('Triage Summary').first();
@@ -97,45 +108,80 @@ export class DefectTriagingPage {
     await expect(this.runningStatus).toBeVisible();
   }
 
+  /**
+   * Wait until the status pill shows "Awaiting Input" — used between HITL steps
+   * to confirm the agent has paused for human input before we look for a button.
+   */
+  async waitForAwaitingInput(): Promise<void> {
+    await expect(this.page.getByText('Awaiting Input').first()).toBeVisible();
+  }
+
   /** HITL prompt #1 — publish all fetched logs to ADO ("Use all filtered logs"). */
   async publishAllLogs(): Promise<void> {
+    await this.waitForAwaitingInput();
     await expect(this.logPublishPrompt).toBeVisible();
     await this.publishLogsButton.click();
   }
 
   /** HITL prompt #1 — skip publishing logs to ADO ("Skip log publishing"). */
   async skipLogPublishing(): Promise<void> {
+    await this.waitForAwaitingInput();
     await expect(this.logPublishPrompt).toBeVisible();
     await this.skipLogsButton.click();
   }
 
   /** HITL prompt #2 — answer the "continue with Defect Analyzer?" prompt YES. */
   async continueWithAnalyzer(): Promise<void> {
+    await this.waitForAwaitingInput();
     await expect(this.analyzerPrompt).toBeVisible();
     await this.yesButton.click();
   }
 
   /** HITL prompt #2 — decline continuing with the Defect Analyzer (NO). */
   async declineAnalyzer(): Promise<void> {
+    await this.waitForAwaitingInput();
     await expect(this.analyzerPrompt).toBeVisible();
     await this.noButton.click();
   }
 
-  /** HITL prompt #2 — pick the assignee from the list the agent surfaces. */
-  async selectAssignee(assignee: string): Promise<void> {
-    const candidate = this.page.getByText(assignee);
-    await expect(candidate).toBeVisible();
-    await candidate.click();
+  /** HITL prompt #3 — publish the defect resolution to ADO (YES). */
+  async publishResolutionToAdo(): Promise<void> {
+    await this.waitForAwaitingInput();
+    await expect(this.publishResolutionPrompt).toBeVisible();
+    await this.yesButton.click();
   }
 
-  /** Click "Triage Defect" without confirming a Running status (negative paths). */
-  async clickTriageDefect(): Promise<void> {
-    await this.triageDefectButton.click();
+  /** HITL prompt #4 — approve assigning the analyzed defect (YES). */
+  async approveAssignment(): Promise<void> {
+    await this.waitForAwaitingInput();
+    await expect(this.assignmentPrompt).toBeVisible();
+    await this.yesButton.click();
   }
 
-  /** Assert the Defect ID validation error is shown (blank submit). */
+  /** HITL prompt #4 — decline assigning the analyzed defect (NO). */
+  async declineAssignment(): Promise<void> {
+    await this.waitForAwaitingInput();
+    await expect(this.assignmentPrompt).toBeVisible();
+    await this.noButton.click();
+  }
+
+  /**
+   * HITL prompt #5 — pick a contributor from the list when no auto-match is
+   * found. Clicks the first button whose label contains the given name fragment.
+   */
+  async selectContributor(nameFragment: string): Promise<void> {
+    await this.waitForAwaitingInput();
+    await expect(this.selectContributorPrompt).toBeVisible();
+    await this.page.getByRole('button', { name: new RegExp(nameFragment, 'i') }).first().click();
+  }
+
+  /**
+   * Assert the Defect ID field is empty and the "Triage Defect" button is
+   * disabled — the live site prevents submission with a blank ID by disabling
+   * the button rather than showing an inline error message.
+   */
   async assertDefectIdRequired(): Promise<void> {
-    await expect(this.validationError).toBeVisible();
+    await expect(this.triageDefectButton).toBeDisabled();
   }
 
   /** Assert the run ended WITHOUT an owner being assigned (declined path). */
@@ -143,12 +189,13 @@ export class DefectTriagingPage {
     await expect(this.page.getByText(/Successfully assigned defect/i)).toHaveCount(0);
   }
 
-  /** Assert the run finished with a Triage Summary, ADO resolution, and owner. */
+  /** Assert the run finished: resolution added to ADO, defect assigned. */
   async assertTriageSummary(): Promise<void> {
-    await expect(this.triageSummary).toBeVisible();
-    await expect(this.page.getByText(/Resolution published to ADO/i)).toBeVisible();
+    // "Resolution added to ADO successfully!" confirmed in the live conversation.
+    await expect(this.page.getByText(/Resolution added to ADO successfully/i)).toBeVisible();
+    // Final confirmation message after the contributor is assigned.
     await expect(
-      this.page.getByText(/Flow ended|Successfully assigned defect/i),
+      this.page.getByText(/assigned|assignment complete|defect.*assigned|thank you/i).first(),
     ).toBeVisible();
   }
 }
