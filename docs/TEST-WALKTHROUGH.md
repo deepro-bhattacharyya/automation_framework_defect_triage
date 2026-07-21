@@ -1,9 +1,10 @@
-# Test Walkthrough — What Each Script Actually Does
+# Test Walkthrough — The Live Defect Triaging Flow
 
-> Updated to match the recorded run (`defect_triage_agent_without_audio.mp4`).
-> This run uses the **Neo4j Lookup** flow: you enter only a Defect ID, and the
-> agent fetches the description, steps, and logs itself. There are **two**
-> human-in-the-loop prompts in this flow.
+> This document describes the **actual** end-to-end flow as confirmed against the
+> live hub (`https://10.120.101.154`) — every navigation step, every locator, and
+> all **five** human-in-the-loop (HITL) prompts. It is the source of truth the
+> automation mirrors. If the live UI changes, update this file and the matching
+> locators in [../pages/DefectTriagingPage.ts](../pages/DefectTriagingPage.ts).
 >
 > Base URL (from `playwright.config.ts`): **`https://10.120.101.154`**
 
@@ -11,137 +12,114 @@
 
 ## Script 1 — Login (`tests/auth/login-valid.spec.ts`)
 
-**Test name:** *user can sign in to the QE Agentic Hub with valid credentials*
+| # | Action | Locator | Notes |
+|---|--------|---------|-------|
+| 1 | Navigate to `/login` | `page.goto('/login')` | |
+| 2 | Fill email | `input[type="email"]` | Fields have **no** label/id/name — matched by type |
+| 3 | Fill password | `input[type="password"]` | |
+| 4 | Click **Sign in** | `getByRole('button', { name: 'Sign in' })` | |
+| 5 | Verify | left `/login` + "QE Agentic Hub" visible | Login is a client-side SPA route change |
 
-| # | Action | What it targets on the page | Source line |
-|---|--------|------------------------------|-------------|
-| 1 | Navigate | Opens `https://10.120.101.154/login` | `page.goto('/login')` |
-| 2 | Type email | Field labelled **"Email"** → fills `deepro.bhattacharyya@cognizant.com` (or `$env:HUB_EMAIL`) | `getByLabel('Email')` |
-| 3 | Type password | Field labelled **"Password"** → fills the password | `getByLabel('Password')` |
-| 4 | Click | Button named **"Sign in"** | `getByRole('button', { name: 'Sign in' })` |
-
-### What it then checks (must be true or the test fails)
-- ✅ URL is **no longer** `.../login`
-- ✅ The text **"QE Agentic Hub"** is visible somewhere on the page
-
----
-
-## Script 2 — Defect Triaging (`tests/agent/defect-triaging-run.spec.ts`)
-
-**Test name:** *defect triaging agent runs a defect end-to-end and assigns an owner*
-
-> **Flow used:** Neo4j Lookup (enter Defect ID only — the agent fetches the
-> rest). The run pauses **twice** for human input: once to continue with the
-> Defect Analyzer, and once to choose the assignee from a list.
-
-### Step group 1 — Log in (same as Script 1)
-| # | Action | Target | Source line |
-|---|--------|--------|-------------|
-| 1 | Navigate | `/login` | `page.goto('/login')` |
-| 2 | Type email | Field **"Email"** | `getByLabel('Email')` |
-| 3 | Type password | Field **"Password"** | `getByLabel('Password')` |
-| 4 | Click | Button **"Sign in"** | `getByRole('button', { name: 'Sign in' })` |
-| 5 | Check | URL is no longer `/login` | — |
-
-### Step group 2 — Open the Defect Triaging workspace
-| # | Action | Target | Source line |
-|---|--------|--------|-------------|
-| 6 | Navigate | `/workspace?agent=defect-triaging&project=proj-rbac-test` | `page.goto(...)` |
-| 7 | Check | Text **"Defect Triaging"** is visible | `getByText('Defect Triaging')` |
-
-### Step group 3 — Enter the Defect ID (Neo4j Lookup)
-| # | Action | Target | Value filled | Source line |
-|---|--------|--------|--------------|-------------|
-| 8 | Click | Tab/button **"Neo4j Lookup"** | — | `getByRole('button', { name: 'Neo4j Lookup' })` |
-| 9 | Type | The single **"DEFECT ID"** field (placeholder `e.g. "DEF-123" or "BANK-389"`) | `80` | `getByPlaceholder(/DEF-123.*BANK-389/i)` |
-
-> **Note:** In the Neo4j Lookup flow there is **only one input field — the
-> Defect ID.** The description, steps to reproduce, and logs are fetched
-> automatically by the agent from Neo4j/ADO — they are **not** typed in. (The
-> three-field form belongs to the *Manual Input* tab, which this run does not
-> use.)
-
-### Step group 4 — Start the run
-| # | Action | Target | Source line |
-|---|--------|--------|-------------|
-| 10 | Click | Button **"Triage Defect"** (or press Enter — "Tip: Enter to submit") | `getByRole('button', { name: 'Triage Defect' })` |
-| 11 | Check | Status pill shows **"Running"** | `getByText(/Running/i)` |
-
-### Step group 5 — Human-in-the-loop prompt #1 (Defect Analyzer)
-| # | Action | Target | Source line |
-|---|--------|--------|-------------|
-| 12 | Check | Text **"Do you want to continue with Defect Analyzer? [1] YES [2] NO"** appears | `getByText(/Do you want to continue with Defect Analyzer/i)` |
-| 13 | Click | Button **"YES"** | `getByRole('button', { name: 'YES' })` |
-
-> This first prompt fires after the agent fetches the defect, adds logs to ADO,
-> and is about to run root-cause analysis. It must be answered before the
-> analysis (and the second prompt) happens.
-
-### Step group 6 — Human-in-the-loop prompt #2 (pick the assignee)
-| # | Action | Target | Source line |
-|---|--------|--------|-------------|
-| 14 | Check | A list of candidate assignees appears in the conversation panel (names like *"Arul Amuthan, Ahill Savio (Cognizant)"*, *"Diksha, Kumari (Cognizant)"*, …) | `getByText(/Arul Amuthan, Ahill Savio/i)` |
-| 15 | Click | The chosen assignee's name in the list | `getByText('Arul Amuthan, Ahill Savio (Cognizant)').click()` |
-
-> **This is a list pick, not a YES/NO button.** After root-cause analysis the
-> status returns to **"Awaiting Input"** and the agent lists possible owners;
-> you click one to assign the defect.
-
-### Step group 7 — Verify completion
-The run is considered successful only if **all three** are visible:
-| # | Expected text on screen | Source line |
-|---|--------------------------|-------------|
-| 16 | **"Triage Summary"** | `getByText('Triage Summary')` |
-| 17 | **"Resolution published to ADO"** | `getByText(/Resolution published to ADO/i)` |
-| 18 | **"Flow ended"** OR **"Successfully assigned defect"** | `getByText(/Flow ended\|Successfully assigned defect/i)` |
-
-> The final **Triage Summary** panel shows: **Defect 80**, **Resolution
-> published to ADO**, **Assigned to: Arul Amuthan, Ahill Savio (Cognizant)**.
-> The conversation ends with *"Successfully assigned defect to Arul Amuthan,
-> Ahill Savio (Cognizant) in ADO! Flow ended. Thank you for using the Defect
-> Triage!"*
+**Negative auth cases:**
+- **Wrong password** → stays on `/login`, shows an error → `login-invalid.spec.ts`
+- **Blank fields** → stays on `/login`, shows **"Email is required" / "Password is required"** → `login-empty-fields.spec.ts`
 
 ---
 
-## The defect being triaged
+## Script 2 — Defect Triaging happy path (`tests/agent/defect-triaging-run.spec.ts`)
 
-In the Neo4j Lookup flow you only supply the **Defect ID (`80`)**. For reference,
-the details the agent fetches for it are:
+### Part A — Navigate to the workspace (via the real UI)
 
-| Field | Value (fetched by the agent) |
-|-------|------------------------------|
+| # | Action | Locator |
+|---|--------|---------|
+| 1 | Log in | (as Script 1; handled by the `authedPage` fixture) |
+| 2 | Click **Projects** | `getByRole('link', { name: 'Projects' })` |
+| 3 | Click **HCM Project** card | `getByRole('heading', { name: 'HCM Project' })` |
+| 4 | Click the Defect Triaging **Run** link | `a[href="/workspace?agent=defect-triaging&project=proj-rbac-test"]` |
+| 5 | Verify | "Defect Triaging" heading visible |
+
+> **Why match the Run link by exact href?** The HCM Project lists ~24 agents,
+> all with a generic "Run" link — including a `defect-triaging-crewai` variant.
+> The exact `agent=defect-triaging` href disambiguates. HCM Project's slug is
+> `proj-rbac-test` (seen in its settings URL).
+
+### Part B — Submit the defect (Neo4j Lookup)
+
+| # | Action | Locator |
+|---|--------|---------|
+| 6 | Click **Neo4j Lookup** tab | `getByRole('button', { name: 'Neo4j Lookup' })` |
+| 7 | Enter Defect ID `80` | `getByPlaceholder(/DEF-123.*BANK-389/i)` |
+| 8 | Click **Triage Defect** | `getByRole('button', { name: 'Triage Defect' })` |
+| 9 | Verify status → **Running** | `getByText(/Running/i)` |
+
+> **Hydration note:** the tab click can register as focus-only before React
+> attaches its handler, leaving the panel on "Manual Input". `clickNeo4jLookup`
+> confirms the switch by waiting for the Neo4j Defect ID field (unique
+> `BANK-389` placeholder) and retries the click once if needed.
+>
+> **Blank ID:** the **Triage Defect** button is **disabled** while the ID field
+> is empty — that *is* the validation (no inline error text). See
+> `defect-triaging-empty-id.spec.ts`.
+
+### Part C — The five human-in-the-loop prompts
+
+The agent runs (`Fetching defect → Extracting identifiers → Searching logs →
+Filtering logs → Finding similar → Root cause analysis → Identifying owner`) and
+pauses **five** times. Before each, the status pill shows **"Awaiting Input"**
+(the automation waits for that first via `waitForAwaitingInput()`).
+
+| # | Prompt text on screen | Action taken (happy path) | Buttons |
+|---|-----------------------|---------------------------|---------|
+| **1** | "Please find below N fetched logs. Select the ones to publish to ADO." | **Use all filtered logs** | `Use all filtered logs` / `Skip log publishing` |
+| **2** | "Do you want to continue with Defect Analyzer? [1] YES [2] NO" | **YES** | `YES` / `NO` |
+| **3** | "Do you want to publish the defect resolution to ADO? [1] YES [2] NO" | **YES** | `YES` / `NO` |
+| **4** | "Do you want to proceed with assigning the analyzed defect? [1] YES [2] NO" | **YES** | `YES` / `NO` |
+| **5** | "Please select and assign new contributor" | Click a contributor (name contains **"Sunil"**) | one button per candidate |
+
+> **Prompt 5 nuance:** when the agent finds no auto-match for the root-cause
+> category ("No contributor found related to Test Data Issue.") it lists
+> candidate contributors as buttons, e.g. *"KURUBA VIRUPAKSHAPPA, Sunil BHUSHAN
+> (Cognizant)"*, *"Hiray, Anuj (Cognizant)"*, … The automation clicks the first
+> button whose label contains the configured fragment (`CONTRIBUTORS.sunil`).
+
+### Part D — Completion
+
+| Check | Locator |
+|-------|---------|
+| Resolution published | `getByText(/Resolution added to ADO successfully/i)` |
+| Defect assigned (final confirmation) | `getByText(/assigned\|assignment complete\|thank you/i)` |
+
+---
+
+## The defect used (ID `80`)
+
+In the Neo4j Lookup flow you only supply the **Defect ID**; the agent fetches the
+rest from ADO/Neo4j:
+
+| Field | Value |
+|-------|-------|
 | Defect ID | `80` |
 | Description | `Tried created a new project "alpha" but failed to create` |
-| Steps | `Launch the URL https://10.120.101.147/Login. Log in (Username: test@cts.com, Password: Pass@123). Select project "Test1". Navigate to Manage Projects. Click "Add Project", name it "alpha", save. Expected: alpha created. Actual: error "Application offline".` |
-| Root cause | Test Data Issue — a project named "alpha" already exists (uniqueness constraint) |
+| Root cause (agent-derived) | **Test Data Issue** — `Project with name alpha already exists` |
 
 ---
 
-## Quick reference — everything the test clicks/types, in order
+## Quick reference — the whole happy path, in order
 
-**Script 1:** `/login` → Email → Password → **Sign in** → (verify left /login + "QE Agentic Hub")
+`loginAs` → **Projects** → **HCM Project** → **Defect Triaging Run** →
+**Neo4j Lookup** → Defect ID `80` → **Triage Defect** → *Running* →
+HITL1 **Use all filtered logs** → HITL2 **YES** → HITL3 **YES** →
+HITL4 **YES** → HITL5 **click contributor** → verify *Resolution added to ADO* +
+assignment confirmation.
 
-**Script 2:** `/login` → Email → Password → **Sign in** → go to `/workspace?...` → **Neo4j Lookup** → Defect ID **`80`** → **Triage Defect** → wait **"Running"** → prompt #1 **"continue with Defect Analyzer?" → YES** → prompt #2 **pick assignee from list → click the name** → verify **"Triage Summary"** + **"Resolution published to ADO"** + **"Flow ended" / "Successfully assigned defect"**
-
----
-
-## Changes from the previous version of this doc
-
-1. **Form fields corrected.** Neo4j Lookup has **one** field (Defect ID), not three. Removed the Description and Steps-to-Reproduce typing steps (those belong to the Manual Input tab).
-2. **Submit button corrected.** It is labelled exactly **"Triage Defect"** (was a loose `send|submit|triage` match).
-3. **Added the missing first HITL prompt** — *"Do you want to continue with Defect Analyzer? [1] YES [2] NO"* — **YES**. This was not in the old doc.
-4. **Assignment step corrected.** It is a **list of candidate names you click**, not a single **YES** button.
-5. Completion checks (Triage Summary / Resolution published to ADO / Flow ended) were already correct and are unchanged.
+This is implemented as the single call
+`triageDefectEndToEnd(page, DEFECTS.sample.id)` in
+[../reusable-components/AgentFlows.ts](../reusable-components/AgentFlows.ts).
 
 ---
 
-## How to watch it run live (to verify visually)
+## Watch it run live
 
 ```powershell
-npm run test:headed     # opens a real Chrome window so you can watch every step
-```
-
-Run a single script while verifying:
-```powershell
-npx playwright test tests/agent/defect-triaging-run.spec.ts --headed
+npm run test:headed -- tests/agent/defect-triaging-run.spec.ts
 ```

@@ -23,7 +23,7 @@ automation-framework-defect-triage/
 │   ├── auth/                       login-valid / login-invalid / login-empty-fields
 │   └── agent/                      defect-triaging run / decline / empty-id / duplicate
 ├── testcases/                      human-readable test-case registers (auth, defect-triaging)
-├── docs/                           PLAN.md + TEST-WALKTHROUGH.md
+├── docs/                           SETUP · ARCHITECTURE · TEST-WALKTHROUGH · TROUBLESHOOTING · CI · PLAN
 ├── .github/workflows/e2e.yml       CI pipeline (self-hosted runner)
 ├── playwright.config.ts
 ├── package.json
@@ -67,9 +67,21 @@ npx playwright test tests/agent/defect-triaging-run.spec.ts
 | Auth | valid login, wrong password, empty fields |
 | Defect Triaging | happy-path run, decline-at-prompt, empty Defect ID, duplicate re-submit |
 
-Each spec is catalogued in [testcases/](testcases/) (`auth.md`,
-`defect-triaging.md`). The exact live flow each test drives is documented in
+All 7 specs pass against the live hub. Each is catalogued in
+[testcases/](testcases/) (`auth.md`, `defect-triaging.md`). The exact live flow —
+including all five human-in-the-loop prompts — is documented in
 [docs/TEST-WALKTHROUGH.md](docs/TEST-WALKTHROUGH.md).
+
+## Documentation
+
+| Doc | Covers |
+|-----|--------|
+| [docs/SETUP.md](docs/SETUP.md) | Install, credentials, running, timeouts, constraints |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | The layered design (pages → flows → tools → tests) |
+| [docs/TEST-WALKTHROUGH.md](docs/TEST-WALKTHROUGH.md) | Exact live flow + all 5 HITL prompts + locators |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Flaky-backend handling, fixing a broken locator |
+| [docs/CI.md](docs/CI.md) | Pipeline, self-hosted runner, secrets |
+| [docs/PLAN.md](docs/PLAN.md) | Original 5-phase build plan (historical) |
 
 ## CI
 
@@ -87,11 +99,12 @@ The four agent specs share live backend state (same Defect ID, ADO writes), so
 if they prove flaky in parallel, set `workers: 1` in
 [playwright.config.ts](playwright.config.ts).
 
-## Confirming real selectors
+## Confirming / fixing selectors
 
-Some negative-path locators (login error, NO button, validation messages) are
-best-effort — those paths weren't in the walkthrough recording. If a locator
-doesn't match the live DOM:
+All locators are confirmed against the live DOM. If the UI changes and a locator
+breaks, use the DOM-snapshot method in
+[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md#fixing-a-broken-locator), or
+discover interactively:
 
 ```powershell
 npx playwright codegen https://10.120.101.154
