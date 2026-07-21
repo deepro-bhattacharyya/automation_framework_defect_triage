@@ -23,6 +23,11 @@ jobs:
     runs-on: [self-hosted]
     timeout-minutes: 30
 
+    # Hoisted to job level so the Slack step's `if:` can read it. A step's own
+    # `env:` block is NOT available to that same step's `if:` expression.
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,11 +68,16 @@ jobs:
           retention-days: 14
 
       - name: Notify Slack
+        # env.SLACK_WEBHOOK_URL is set at job level (above), so it is visible here.
         if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        # Force bash — the default shell on a self-hosted Windows runner is
+        # PowerShell, which does not understand this bash syntax.
+        shell: bash
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           STATUS: ${{ job.status }}
+          REF_NAME: ${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           curl -s -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"Defect Triaging E2E: *${STATUS}* on \`${GITHUB_REF_NAME}\` (run ${GITHUB_RUN_ID}). Report uploaded as an artifact.\"}" \
+            --data "{\"text\":\"Defect Triaging E2E: *${STATUS}* on \`${REF_NAME}\` (run ${RUN_ID}). Report uploaded as an artifact.\"}" \
             "${SLACK_WEBHOOK_URL}"
